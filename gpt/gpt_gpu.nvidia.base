@@ -1,0 +1,86 @@
+# Use CUDA 11.6.2 base image
+FROM nvidia/cuda:11.6.2-devel-ubuntu20.04
+
+# Set time zone and install dependencies in a single layer
+ENV TZ=America/New_York
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone && \
+    apt-get update && apt-get install -y \
+    apt-utils \
+    build-essential \
+    git \
+    wget \
+    autoconf \
+    libtool \
+    pkg-config \
+    libssl-dev \
+    zlib1g-dev \
+    libfftw3-dev \
+    libfftw3-mpi-dev \
+    libopenmpi-dev \
+    openmpi-bin \
+    python3 \
+    python3-pip \
+    g++-9 \
+    && rm -rf /var/lib/apt/lists/* \
+    && python3 -m pip install --no-cache-dir numpy
+
+# Set g++-9 as the default g++ compiler
+RUN update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-9 100
+
+# Set environment variables
+ENV CUDA_HOME=/usr/local/cuda \
+    LD_LIBRARY_PATH=${CUDA_HOME}/lib64:/opt/gpt/dependencies/Grid/lib:${LD_LIBRARY_PATH} \
+    PATH=${CUDA_HOME}/bin:${PATH} \
+    PYTHONPATH="/opt/gpt/lib/gpt:${PYTHONPATH}"
+
+# Clone gpt repository and precompile Python files
+WORKDIR /opt
+RUN git clone -b scior https://github.com/Greyyy-HJC/gpt.git /opt/gpt && \
+    cd /opt/gpt && \
+    git checkout c8a03fbde2c4530140c284f77b23c8b71b4f81e2 && \
+    python3 -m compileall /opt/gpt/lib/gpt
+
+# Install Lime library
+WORKDIR /opt/gpt/dependencies
+RUN wget https://github.com/usqcd-software/c-lime/tarball/master && \
+    tar xzf master && \
+    mv usqcd-software-c-lime* lime && \
+    rm -f master && \
+    cd lime && \
+    ./autogen.sh && \
+    ./configure && \
+    make -j$(nproc) && \
+    cd ..
+
+# Install Grid
+WORKDIR /opt/gpt/dependencies
+RUN git clone -b gpt_proton https://github.com/Greyyy-HJC/Grid.git && \
+    cd Grid && \
+    git checkout 674472c8f772067dadce2ec69090bb24188d3584 && \
+    ./bootstrap.sh && \
+    mkdir build && \
+    cd build && \
+    ../configure \
+        --enable-unified=no \
+        --enable-accelerator=cuda \
+        --enable-alloc-align=4k \
+        --enable-accelerator-cshift \
+        --enable-shm=nvlink \
+        --enable-comms=none \
+        --disable-comms-threads \
+        --enable-simd=GPU \
+        --with-fftw=/usr/include \
+        CXX=nvcc \
+        CXXFLAGS="-ccbin g++-9 -gencode arch=compute_86,code=sm_86 -std=c++17 --cudart shared --compiler-options=-fPIC -lcublas" \
+        LIBS="-lrt" \
+        LDFLAGS="--cudart shared --compiler-options -fopenmp -lcublas" && \
+    cd Grid && \
+    make -j$(nproc)
+
+# Build cgpt and set up environment
+WORKDIR /opt/gpt/lib/cgpt
+RUN ./make /opt/gpt/dependencies/Grid/build $(nproc) && \
+    cp build/source.sh /etc/profile.d/gpt.sh
+
+# Set default command
+CMD ["/bin/bash"]

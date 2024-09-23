@@ -1,0 +1,74 @@
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Summary of configuration for Grid v0.7.0
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+----- GIT VERSION -------------------------------------
+commit: 674472c8
+branch: gpt_proton
+date  : 2024-05-01
+----- PLATFORM ----------------------------------------
+architecture (build)        : x86_64
+os (build)                  : linux-gnu
+architecture (target)       : x86_64
+os (target)                 : linux-gnu
+compiler vendor             : gnu
+compiler version            : 
+----- BUILD OPTIONS -----------------------------------
+Nc                          : 3
+SIMD                        : GPU (width= 64)
+Threading                   : yes
+Acceleration                : cuda
+Unified virtual memory      : no
+Communications type         : none
+Shared memory allocator     : nvlink
+Shared memory mmap path     : /var/lib/hugetlbfs/global/pagesize-2MB/
+Default precision           : 
+Software FP16 conversion    : yes
+RNG choice                  : sitmo
+GMP                         : no
+LAPACK                      : no
+FFTW                        : yes
+LIME (ILDG support)         : no
+HDF5                        : no
+build DOXYGEN documentation : no
+Sp2n                        : no
+----- BUILD FLAGS -------------------------------------
+CXXFLAGS:
+    -I/opt/gpt/dependencies/Grid
+    -I/usr/include/include
+    -O3
+    -ccbin
+g++-9
+    -gencode
+arch=compute_86,code=sm_86
+    -std=c++17
+    --cudart
+shared
+    --compiler-options=-fPIC
+    -lcublas
+    -Xcompiler
+    -fno-strict-aliasing
+    --expt-extended-lambda
+    --expt-relaxed-constexpr
+    -Xcompiler
+    -fopenmp
+LDFLAGS:
+    -L/opt/gpt/dependencies/Grid/build/Grid
+    -L/usr/include/lib
+    --cudart
+shared
+    --compiler-options
+    -fopenmp
+    -lcublas
+    -Xcompiler
+    -fopenmp
+LIBS:
+    -lz
+    -lcrypto
+    -lfftw3f
+    -lfftw3
+    -lstdc++
+    -lm
+    -lrt
+    -lcuda
+    -lz
+-------------------------------------------------------

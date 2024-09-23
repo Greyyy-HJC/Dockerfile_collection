@@ -1,0 +1,88 @@
+# Use the NVIDIA CUDA base image
+FROM nvidia/cuda:11.2.2-devel-ubuntu20.04
+
+# Install necessary packages
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        build-essential \
+        git \
+        cmake \
+        gcc \
+        g++ \
+        gfortran \
+        libopenblas-dev \
+        liblapacke-dev \
+        liblapack-dev \
+        libgsl-dev \
+        libhdf5-serial-dev \
+        libfftw3-dev \
+        libeigen3-dev \
+        numactl \
+        libnuma-dev \
+        libhwloc-dev \
+        bc \
+        automake \
+        autoconf \
+        libtool \
+        libgmp-dev \
+        libmpfr-dev \
+        libmpc-dev \
+        wget \
+        vim \
+        python3 \
+        openmpi-bin \
+        openmpi-common \
+        libopenmpi-dev && \
+    rm -rf /var/lib/apt/lists/*
+
+# Disable SSL verification for Git
+RUN git config --global http.sslVerify false
+
+# Clone build2 repository and checkout the required branch
+RUN git clone --recursive https://usqcd.lns.mit.edu/git/LHPC/Public/build2.git && \
+    cd build2 && \
+    git checkout quda-dev && \
+    git submodule update
+
+# Add mit-gitweb remote and update submodules
+RUN cd build2/parts/quda/tree && \
+    git remote add mit-gitweb https://usqcd.lns.mit.edu/git/LHPC/Public/alien-libs/quda.git && \
+    git fetch mit-gitweb && \
+    cd ../../../ && \
+    git submodule update
+
+# Modify CMakeLists.txt to update Eigen URL and SHA
+RUN sed -i '237s|.*|set(EIGEN_URL https://gitlab.com/libeigen/eigen/-/archive/${EIGEN_VERSION}/eigen-${EIGEN_VERSION}.tar.bz2)|' build2/parts/quda/tree/CMakeLists.txt && \
+    sed -i '238s|.*|set(EIGEN_SHA 685adf14bd8e9c015b78097c1dc22f2f01343756f196acdc76a678e1ae352e11)|' build2/parts/quda/tree/CMakeLists.txt
+
+# Add THRUST_IGNORE_CUB_VERSION_CHECK definition to thrust_helper.cuh
+RUN sed -i '20i#define THRUST_IGNORE_CUB_VERSION_CHECK' build2/parts/quda/tree/include/thrust_helper.cuh
+
+# Set the CUDA_HOME environment variable
+ENV CUDA_HOME=/usr/local/cuda
+
+# Copy the moonway.gpu.omp configuration file into the image
+COPY moonway.gpu.omp build2/configs/moonway.gpu.omp
+
+# Copy the check_hash.sh and submodule_hash_ls.txt files into the image
+COPY check_hash.sh /check_hash.sh
+COPY submodule_hash_ls.txt /submodule_hash_ls.txt
+
+# Modify the check_hash.sh script to set the correct parent_dir
+RUN sed -i 's|^parent_dir=.*|parent_dir="/build2"|' /check_hash.sh
+
+# Make check_hash.sh executable
+RUN chmod +x /check_hash.sh
+
+# Run the submodule version check
+RUN /check_hash.sh
+
+# Compile all modules using the specified target
+RUN cd build2 && \
+    make -j8 TARGET=moonway.gpu.omp
+
+# Set LD_LIBRARY_PATH to include the QLUA library directory
+ENV LD_LIBRARY_PATH=/root/qlua/lib:$LD_LIBRARY_PATH
+
+# Set the default command
+CMD ["/bin/bash"]
