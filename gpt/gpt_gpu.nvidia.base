@@ -85,9 +85,8 @@ RUN git clone -b gpt_proton https://github.com/Greyyy-HJC/Grid.git && \
 # Build cgpt and set up environment
 WORKDIR /opt/gpt/lib/cgpt
 RUN ./make /opt/gpt/dependencies/Grid/build $(nproc) && \
-    cp build/source.sh /etc/profile.d/gpt.sh && \
-    source /etc/profile.d/gpt.sh && \
-    cd ../..
+    source /opt/gpt/lib/cgpt/build/source.sh && \
+    cd /root
 
 # Set default command
 CMD ["/bin/bash"]
