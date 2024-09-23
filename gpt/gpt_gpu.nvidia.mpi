@@ -57,7 +57,7 @@ RUN wget https://github.com/usqcd-software/c-lime/tarball/master && \
     make -j$(nproc) && \
     cd ..
 
-# Install Grid
+# Install Grid with MPI support
 WORKDIR /opt/gpt/dependencies
 RUN git clone -b gpt_proton https://github.com/Greyyy-HJC/Grid.git && \
     cd Grid && \
@@ -71,15 +71,14 @@ RUN git clone -b gpt_proton https://github.com/Greyyy-HJC/Grid.git && \
         --enable-alloc-align=4k \
         --enable-accelerator-cshift \
         --enable-shm=nvlink \
-        --enable-comms=none \
+        --enable-comms=mpi \            
         --disable-comms-threads \
         --enable-simd=GPU \
         --with-fftw=/usr/include \
-        CXX=nvcc \
-        CXXFLAGS="-ccbin g++-9 -gencode arch=compute_86,code=sm_86 -std=c++17 --cudart shared --compiler-options=-fPIC -lcublas" \
+        CXX=mpicxx \        
+        CXXFLAGS="-ccbin mpicxx -gencode arch=compute_86,code=sm_86 -std=c++17 --cudart shared --compiler-options=-fPIC -lcublas" \
         LIBS="-lrt" \
         LDFLAGS="--cudart shared --compiler-options -fopenmp -lcublas" && \
-    cd Grid && \
     make -j$(nproc)
 
 # Build cgpt and set up environment
