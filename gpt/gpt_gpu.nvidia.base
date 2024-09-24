@@ -1,3 +1,5 @@
+### expression_mul_double_iSinglet may fail, rebuild it in the container
+
 # Use CUDA 11.6.2 base image
 FROM nvidia/cuda:11.6.2-devel-ubuntu20.04
 
