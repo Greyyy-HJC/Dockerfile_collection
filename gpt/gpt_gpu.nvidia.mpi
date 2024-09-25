@@ -75,10 +75,11 @@ RUN git clone -b gpt_proton https://github.com/Greyyy-HJC/Grid.git && \
         --disable-comms-threads \
         --enable-simd=GPU \
         --with-fftw=/usr/include \
-        CXX=mpicxx \        
+        CXX=nvcc \        
         CXXFLAGS="-ccbin mpicxx -gencode arch=compute_86,code=sm_86 -std=c++17 --cudart shared --compiler-options=-fPIC -lcublas" \
         LIBS="-lrt" \
         LDFLAGS="--cudart shared --compiler-options -fopenmp -lcublas" && \
+    cd Grid && \
     make -j$(nproc)
 
 # Build cgpt and set up environment
